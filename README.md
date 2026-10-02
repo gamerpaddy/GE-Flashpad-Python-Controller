@@ -141,6 +141,7 @@ corrects and displays the result in one step.
 ## The tools
 
 ### `flashpad_capture_gui.py` -  the main application
+<img width="1760" height="1244" alt="python_1TnscqXnfT" src="https://github.com/user-attachments/assets/f300dbe7-7de5-4038-bdce-f83ee50d2d1c" />
 
 Everything in one window.
 
