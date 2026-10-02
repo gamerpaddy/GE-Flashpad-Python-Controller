@@ -14,7 +14,7 @@ No vendor software, no console, no licence dongle, and no modification to the de
 📖 **Full write-up, teardown photos and protocol reference:**
 [GE Medical FlashPad Digital X-ray Detector on the Recessim wiki](https://wiki.recessim.com/view/GE_Medical_Flashpad_Digital_Xray_Detector)
 
-That page covers the hardware in depth — internal photos, the tether cable pinout, sensor
+That page covers the hardware in depth -  internal photos, the tether cable pinout, sensor
 tables, the shock/drop event log, flash layout and the complete protocol documentation. This
 repository is the software side of it.
 
@@ -30,6 +30,8 @@ repository is the software side of it.
 * Subtracts a dark frame and repairs dead rows and columns
 * Saves raw, 16-bit TIFF and PNG; views with pan/zoom, CLAHE, colour palettes and cropping
 
+<img width="2048" height="2048" alt="flashpad_xray_20261001_150215_crop" src="https://github.com/user-attachments/assets/aee56183-4400-4eb6-8819-9793965f1a64" />
+
 ## What you need
 
 **Hardware**
@@ -38,9 +40,11 @@ repository is the software side of it.
 |---|---|
 | GE FlashPad detector | Tested on a `5340000-7`, firmware `1.6.0.4.2.0.1.3` |
 | 12 V supply + Ethernet from the tether cable | The tether carries both; the panel does not need its battery |
-| A dedicated Ethernet port on your PC | Strongly recommended — the required link settings affect the whole adapter |
+| A dedicated Ethernet port on your PC | Strongly recommended -  the required link settings affect the whole adapter |
 | An X-ray source you can trigger | Only for real exposures. Everything else works without one. |
 | Arduino (optional) | For software-triggered exposures. See [`arduino/`](arduino/). |
+
+<img width="931" height="1028" alt="flashpad" src="https://github.com/user-attachments/assets/ed7e2be3-41a7-49dd-8d1b-d4440ba280a8" />
 
 **Software**
 
@@ -53,7 +57,7 @@ the GUI additionally uses numpy, Pillow, OpenCV and pyserial.
 
 ---
 
-## Setup — read this part carefully
+## Setup -  read this part carefully
 
 Three network settings are **mandatory**. If any one is wrong you get a perfectly working
 control connection and **no image data at all**, with no error message anywhere. This is the
@@ -136,7 +140,7 @@ corrects and displays the result in one step.
 
 ## The tools
 
-### `flashpad_capture_gui.py` — the main application
+### `flashpad_capture_gui.py` -  the main application
 
 Everything in one window.
 
@@ -151,7 +155,7 @@ Everything in one window.
 
 Saved per capture: raw datagram stream, 2048 × 2048 16-bit raw, 16-bit TIFF, PNG.
 
-### `flashpad_acquire.py` — protocol library and CLI
+### `flashpad_acquire.py` -  protocol library and CLI
 
 The engine the other tools build on, and a command-line tool in its own right.
 
@@ -159,7 +163,7 @@ Read-only / diagnostic:
 
 | Option | Does |
 |---|---|
-| `--probe-data` | Reads identity and configuration — good first connectivity test |
+| `--probe-data` | Reads identity and configuration -  good first connectivity test |
 | `--sensors` | All internal sensors and power rails in engineering units |
 | `--backup [DIR]` | Dumps every readable data blob including the full 64 MB flash |
 | `--listen` | Passively watches what the detector sends |
@@ -170,10 +174,10 @@ Acquisition:
 | Option | Does |
 |---|---|
 | `--dark-only --two-exec` | Full readout test, no X-ray needed |
-| `--two-exec` | Required for any acquisition — see [How it works](#how-it-works) |
+| `--two-exec` | Required for any acquisition -  see [How it works](#how-it-works) |
 | (no flag) | Standard acquisition |
 
-Writing (optional, affects detector flash — every write is a dry run unless you add
+Writing (optional, affects detector flash -  every write is a dry run unless you add
 `--commit`, and `--restore-hostlist` is the undo):
 
 | Option | Does |
@@ -182,31 +186,31 @@ Writing (optional, affects detector flash — every write is a dry run unless yo
 | `--restore-hostlist FILE` | Writes a saved host list back |
 | `--commit` | Arms the actual write |
 
-Host registration is **not** required for image transfer — the detector tested here has no
+Host registration is **not** required for image transfer -  the detector tested here has no
 host registered and streams images normally.
 
-### `capture_minimal.py` — the 26-line version
+### `capture_minimal.py` -  the 26-line version
 
 A complete capture with no features, for reading rather than using. If you want to port this
 to another language, start here.
 
-### `reassemble.py` — raw to image
+### `reassemble.py` -  raw to image
 
 Turns a captured datagram stream into a 2048 × 2048 16-bit raw plus a 16-bit PGM. Run with no
 argument for the newest capture, or pass a filename or part of one.
 
-### `arduino/xray_trigger.ino` — example source trigger
+### `arduino/xray_trigger.ino` -  example source trigger
 
 Minimal sketch for triggering an X-ray source and rotating a sample stage over serial
 (9600 baud):
 
 | Command | Does |
 |---|---|
-| `C<ms>` | Pulls pin 13 high for `<ms>` milliseconds — fires the source. Sends no reply. |
+| `C<ms>` | Pulls pin 13 high for `<ms>` milliseconds -  fires the source. Sends no reply. |
 | `CW<deg>` / `CCW<deg>` | Rotates a stepper, replies `OK` |
 
 `CW0` rotates nothing and still replies `OK`, which makes it a safe way to test the link.
-Adapt the sketch to your own hardware — it is an example, not a requirement.
+Adapt the sketch to your own hardware -  it is an example, not a requirement.
 
 ---
 
@@ -216,7 +220,7 @@ Three things are easy to get wrong and account for nearly all failures.
 
 **1. The panel does not detect X-rays.** It is not an AED detector. You arm it, it opens an
 integration window for a set time, and the exposure has to happen *inside* that window. If
-the window expires you still get a complete frame — just an unexposed one, which is exactly
+the window expires you still get a complete frame -  just an unexposed one, which is exactly
 how the no-X-ray test works.
 
 The window length is in ticks of a ~26 MHz clock:
@@ -247,7 +251,7 @@ The image then arrives as 2048 UDP datagrams of 4104 bytes each:
 
 2048 × 4096 = 8 MiB = 2048 × 2048 × 16-bit, little-endian. Always reassemble by
 `blockIndex` rather than arrival order. One quirk: the first datagram often arrives 16 bytes
-short and without its header — `reassemble.py` handles that for you.
+short and without its header -  `reassemble.py` handles that for you.
 
 ---
 
@@ -258,7 +262,7 @@ This removes the panel's fixed pedestal and most of its fixed-pattern noise. A d
 valid for the window length it was taken at, since dark current scales with integration time.
 
 **Dead rows and columns.** Panels have defective lines that show up as dark streaks. They are
-*gain* defects — they only appear where there is signal, so **a dark frame cannot find them**.
+*gain* defects -  they only appear where there is signal, so **a dark frame cannot find them**.
 Detect them on the offset-corrected image instead: compare each row and column median against
 its local neighbourhood, and interpolate across the outliers. The GUI does this automatically.
 
@@ -310,7 +314,7 @@ registration, script download, two-phase execute, dark acquisition, real X-ray a
 image transfer, reassembly, offset and defect correction.
 
 All findings come from a single detector. Other units, firmware versions or panel variants may
-behave differently. Pull requests and corrections are welcome — especially confirmations from
+behave differently. Pull requests and corrections are welcome -  especially confirmations from
 different hardware.
 
 Hardware details, teardown photos and the full protocol reference live on the
@@ -323,4 +327,4 @@ or data files are included or required.
 
 ## Licence
 
-[Unlicense](LICENSE) — public domain. Use it, fork it, put a detector back to work.
+[Unlicense](LICENSE) -  public domain. Use it, fork it, put a detector back to work.
