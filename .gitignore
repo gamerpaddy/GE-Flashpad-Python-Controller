@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+
+# captures and detector data
+captures/
+darks/
+*.raw
+*.tif
+*.tiff
+*.pgm
+*.png
+!docs/*.png
+detector_backup_*/
+*.bin
