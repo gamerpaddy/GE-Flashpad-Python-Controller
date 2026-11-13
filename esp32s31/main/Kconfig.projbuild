@@ -1,0 +1,49 @@
+menu "FlashPad controller"
+
+    config FP_DETECTOR_IP
+        string "Default detector IP"
+        default "192.168.1.30"
+
+    config FP_HOST_IP
+        string "ESP host IP on the detector Ethernet (must be 192.168.1.1 for the real detector)"
+        default "192.168.1.1"
+
+    config FP_RELAY_GPIO
+        int "X-ray relay output GPIO (J2 pin 7 = GPIO2)"
+        range 0 61
+        default 2
+        help
+            Output that drives the relay module. Avoid GPIO5-19 (Ethernet), 26-34 (flash/USB), 36/37/60/61 (strapping),
+            50-57 (audio), 58/59 (UART0). Needs an external pull-down (active-high) / pull-up (active-low) resistor so the
+            relay stays off while the pin is not driven during reset.
+
+    choice FP_RELAY_POLARITY
+        prompt "Relay module polarity"
+        default FP_RELAY_ACTIVE_HIGH
+        config FP_RELAY_ACTIVE_HIGH
+            bool "Active high (pin HIGH energises the relay)"
+        config FP_RELAY_ACTIVE_LOW
+            bool "Active low (pin LOW energises the relay, typical opto-isolated modules)"
+    endchoice
+
+    config FP_RELAY_MAX_PULSE_MS
+        int "Hard cap for one relay pulse (ms)"
+        range 1 60000
+        default 3000
+
+    config FP_AP_SSID
+        string "Default SoftAP SSID"
+        default "FlashPad-ESP"
+
+    config FP_AP_PASS
+        string "Default SoftAP password (8..63 chars)"
+        default "flashpad1"
+
+    config FP_IMAGE_RX_HOOK
+        bool "Receive image datagrams in the Ethernet RX path (bypasses lwIP)"
+        default y
+        help
+            Parses frames for udp/6660 inside the EMAC RX task and copies the pixel data straight into the PSRAM frame buffer.
+            Disable to fall back to a normal UDP socket (slower, can drop datagrams in a burst).
+
+endmenu

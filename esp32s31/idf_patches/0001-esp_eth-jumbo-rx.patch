@@ -1,0 +1,55 @@
+diff --git a/components/esp_eth/Kconfig b/components/esp_eth/Kconfig
+index 4a000d05..1d689157 100644
+--- a/components/esp_eth/Kconfig
++++ b/components/esp_eth/Kconfig
+@@ -38,6 +38,22 @@ menu "Ethernet"
+                 Number of DMA transmit buffers. Each buffer's size is ETH_DMA_BUFFER_SIZE.
+                 Larger number of buffers could increase throughput somehow.
+ 
++        config ETH_RX_JUMBO
++            bool "Receive jumbo frames (non-standard)"
++            default n
++            help
++                Sets the MAC "Jumbo Frame Enable" bit and raises the maximum frame size the driver copies out of
++                the RX DMA descriptors, so frames larger than 1522 bytes (up to ETH_RX_JUMBO_MAX_FRAME) are
++                received instead of being truncated and dropped ("received frame was truncated").
++                Needed for devices that send unfragmented multi-kilobyte UDP datagrams (e.g. 4104 byte payloads).
++                Use together with ETH_DMA_BUFFER_SIZE=1600 and a large ETH_DMA_RX_BUFFER_NUM.
++
++        config ETH_RX_JUMBO_MAX_FRAME
++            int "Maximum received frame size when jumbo reception is enabled (Byte)"
++            depends on ETH_RX_JUMBO
++            range 1522 9018
++            default 4300
++
+         if ETH_DMA_RX_BUFFER_NUM > 15
+             config ETH_SOFT_FLOW_CONTROL
+                 bool "Enable software flow control"
+diff --git a/components/esp_eth/src/mac/esp_eth_mac_esp.c b/components/esp_eth/src/mac/esp_eth_mac_esp.c
+index 6448fcd6..65150749 100644
+--- a/components/esp_eth/src/mac/esp_eth_mac_esp.c
++++ b/components/esp_eth/src/mac/esp_eth_mac_esp.c
+@@ -606,7 +606,11 @@ static void emac_esp32_rx_task(void *arg)
+         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+         do {
+             /* set max expected frame len */
++#if CONFIG_ETH_RX_JUMBO
++            uint32_t frame_len = CONFIG_ETH_RX_JUMBO_MAX_FRAME;
++#else
+             uint32_t frame_len = ETH_MAX_PACKET_SIZE;
++#endif
+             buffer = emac_esp_dma_alloc_recv_buf(emac->emac_dma_hndl, &frame_len);
+             /* we have memory to receive the frame of maximal size previously defined */
+             if (buffer != NULL) {
+@@ -676,6 +680,11 @@ static esp_err_t emac_esp32_init(esp_eth_mac_t *mac)
+     }
+     /* init mac registers by default */
+     emac_hal_init_mac_default(&emac->hal);
++#if CONFIG_ETH_RX_JUMBO
++    /* Jumbo Frame Enable: receive watchdog limit rises from 2048 to 10240 bytes and frames up to 9018 bytes are not
++     * reported as "giant". Required to receive ~4.1 kB unfragmented frames (see ETH_RX_JUMBO). */
++    emac->hal.mac_regs->gmacconfig.jumboframe = 1;
++#endif
+     /* init dma registers with selected EMAC-DMA configuration */
+     emac_hal_dma_config_t dma_config = { .dma_burst_len = emac->dma_burst_len };
+     emac_hal_init_dma_default(&emac->hal, &dma_config);

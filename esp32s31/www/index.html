@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>FlashPad Controller</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<noscript><p class="pad">This page needs JavaScript (all image processing runs in the browser).</p></noscript>
+
+<header id="top">
+  <div class="strip">
+    <strong class="brand">FlashPad</strong>
+    <span class="pill" id="st-conn" title="HTTP link to the ESP32">connecting…</span>
+    <span class="pill" id="st-link" title="Ethernet link to the detector">link –</span>
+    <span class="pill" id="st-det" title="Detector state">detector –</span>
+    <span class="pill" id="st-sess" title="Session / setup mode">session –</span>
+    <span class="pill xr" id="st-xray" title="X-ray output master switch">X-RAY OUTPUT: disabled</span>
+    <span class="grow"></span>
+    <button class="btn small" id="theme" type="button" title="Toggle light / dark theme" aria-label="Toggle theme">◐</button>
+  </div>
+  <div class="strip cap">
+    <span class="cap-state" id="cap-state">idle</span>
+    <span class="cap-step" id="cap-step"></span>
+    <progress id="cap-bar" max="2048" value="0" aria-label="Image blocks received"></progress>
+    <span class="cap-blocks" id="cap-blocks">0 / 2048</span>
+  </div>
+  <div id="msg" role="status" aria-live="polite"></div>
+</header>
+
+<main>
+<!-- ================================================================ device column -->
+<aside id="left" aria-label="Device controls">
+
+  <details class="panel" id="p-capture" open>
+    <summary>Capture</summary>
+    <div class="body">
+      <div class="grid2">
+        <label for="cap-win">Window</label>
+        <span class="inline"><input id="cap-win" type="number" min="0.02" step="any" value="2000" inputmode="decimal">
+          <select id="cap-unit" aria-label="Window unit"><option value="ms">ms</option><option value="s">s</option></select></span>
+        <label for="cap-scrubs">Scrubs</label><input id="cap-scrubs" type="number" min="0" max="255" step="1" value="0">
+        <label for="cap-exp">Exposure (ms)</label><input id="cap-exp" type="number" min="1" step="1" value="250">
+        <label for="cap-dly">Fire delay (ms)</label><input id="cap-dly" type="number" min="0" max="5000" step="1" value="20">
+      </div>
+      <p class="note" id="cap-derived">–</p>
+      <p class="warn" id="cap-warn" hidden></p>
+      <div class="btns">
+        <button class="btn primary" id="btn-xray" type="button">Capture X-RAY</button>
+        <button class="btn" id="btn-dark" type="button">Capture DARK</button>
+        <button class="btn danger" id="btn-abort" type="button" title="Relay OFF immediately and abort the capture">Abort</button>
+        <button class="btn" id="btn-reinit" type="button" title="Drop the session and redo discovery + port setup + Script7">Re-init</button>
+      </div>
+      <p class="note" id="cap-info"></p>
+    </div>
+  </details>
+
+  <details class="panel" id="p-safety" open>
+    <summary>X-ray safety <span class="pill xr small" id="sf-pill">disabled</span></summary>
+    <div class="body">
+      <p class="note">The relay only pulses during an X-ray capture (after the window opens) and during the test pulse, and only while this master switch is ON. It is OFF after every boot and auto-clears when idle.</p>
+      <label class="switch"><input type="checkbox" role="switch" id="sf-master"><span class="track" aria-hidden="true"></span>
+        <span id="sf-master-l">X-ray output master enable</span></label>
+      <div class="grid2 tight">
+        <span>Relay</span><span id="sf-relay" class="mono">–</span>
+        <span>Output pin</span><span id="sf-gpio" class="mono">–</span>
+        <span>Fires</span><span id="sf-fires" class="mono">–</span>
+      </div>
+      <div class="inline">
+        <label for="sf-ms">Test pulse (ms)</label>
+        <input id="sf-ms" type="number" min="1" max="500" step="1" value="100">
+        <button class="btn" id="btn-test" type="button">Test pulse…</button>
+      </div>
+      <label class="check"><input type="checkbox" id="sf-confirm" checked> Ask before each X-ray capture while enabled</label>
+    </div>
+  </details>
+
+  <details class="panel" id="p-dark" open>
+    <summary>Dark frame</summary>
+    <div class="body">
+      <div role="radiogroup" aria-label="Dark source" class="radios">
+        <label><input type="radio" name="darksrc" value="device" checked> Stored dark (device)</label>
+        <label><input type="radio" name="darksrc" value="local"> Local dark (picked frame)</label>
+        <label><input type="radio" name="darksrc" value="none"> None</label>
+      </div>
+      <p class="note" id="dk-info">–</p>
+      <p class="warn" id="dk-warn" hidden></p>
+      <div class="btns">
+        <button class="btn" id="btn-dk-local" type="button" title="Browser only: subtract the displayed frame from later frames">Use last frame as dark</button>
+        <button class="btn" id="btn-dk-save" type="button" title="Copy the device's current frame into its dark store (flash)">Save frame as device dark</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="panel" id="p-settings">
+    <summary>Settings</summary>
+    <div class="body">
+      <form id="cfg-form" autocomplete="off"><div class="grid2" id="cfg-grid"></div>
+        <div class="btns"><button class="btn primary" type="submit">Save settings</button>
+        <button class="btn" type="button" id="cfg-reload">Reload</button>
+        <button class="btn" type="button" id="cfg-validate" title="Capture a dark in full and in fast mode and compare">Validate fast mode</button></div>
+      </form>
+      <p class="note" id="cfg-msg"></p>
+      <p class="note" id="cfg-val"></p>
+    </div>
+  </details>
+
+  <details class="panel" id="p-log">
+    <summary>Device log</summary>
+    <div class="body"><pre id="log" tabindex="0" aria-label="Device log"></pre>
+      <label class="check"><input type="checkbox" id="log-follow" checked> Follow</label></div>
+  </details>
+</aside>
+
+<!-- ================================================================ viewer -->
+<section id="center" aria-label="Image viewer">
+  <div class="toolbar" role="toolbar" aria-label="Viewer tools">
+    <span class="seg" role="radiogroup" aria-label="Mouse tool" id="tools">
+      <label title="Drag to pan"><input type="radio" name="tool" value="pan" checked><span>Pan</span></label>
+      <label title="Drag a rectangle: mean / SD / SNR"><input type="radio" name="tool" value="roi"><span>ROI</span></label>
+      <label title="Drag a line: intensity profile"><input type="radio" name="tool" value="line"><span>Profile</span></label>
+      <label title="Drag the crop box"><input type="radio" name="tool" value="crop"><span>Crop</span></label>
+      <label title="Click to mark a defect pixel / row / column"><input type="radio" name="tool" value="mark"><span>Mark</span></label>
+    </span>
+    <span class="grow"></span>
+    <button class="btn small" id="z-out" type="button" aria-label="Zoom out">−</button>
+    <output id="z-val" class="mono">fit</output>
+    <button class="btn small" id="z-in" type="button" aria-label="Zoom in">+</button>
+    <button class="btn small" id="z-fit" type="button">Fit</button>
+    <button class="btn small" id="z-crop" type="button">Fit crop</button>
+    <button class="btn small" id="z-cropvis" type="button" title="Show or hide the crop box overlay (hidden by default)">Crop box: off</button>
+    <button class="btn small" id="z-100" type="button">1:1</button>
+  </div>
+  <div id="vwrap">
+    <canvas id="view" tabindex="0" role="img" aria-label="Detector image. Arrow keys pan, plus and minus zoom, 0 fits, 1 shows 100 percent."></canvas>
+    <div id="empty">No frame yet – capture a DARK and an X-RAY frame.</div>
+    <div id="dl" hidden><span id="dl-text">Downloading frame…</span><progress id="dl-bar" max="1" value="0"></progress></div>
+    <div id="busy" hidden><span class="spin" aria-hidden="true"></span><span id="busy-text">Processing…</span>
+      <button class="btn small" id="busy-cancel" type="button">Cancel</button></div>
+    <div id="pv" hidden>preview</div>
+  </div>
+  <div class="readout mono" id="readout" aria-live="off">x – y – · raw – · proc –</div>
+  <div class="info" id="frame-info">–</div>
+  <p class="warn" id="frame-warn" hidden></p>
+  <div class="roi mono" id="roi-info">ROI: use the ROI tool</div>
+  <canvas id="profile" height="90" aria-label="Intensity profile"></canvas>
+  <div class="btns save" role="group" aria-label="Save">
+    <button class="btn" id="sv-raw" type="button" title="The u16 little-endian bytes exactly as received from /api/frame">Save RAW original</button>
+    <button class="btn" id="sv-proc" type="button" title="Processed 16-bit data, u16 little-endian">Save RAW processed</button>
+    <button class="btn" id="sv-png" type="button" title="8-bit RGB PNG of exactly what is shown">Save PNG display</button>
+    <button class="btn" id="sv-png16" type="button" title="16-bit grayscale PNG of the processed data">Save PNG 16-bit</button>
+  </div>
+  <label class="check"><input type="checkbox" id="sv-crop" checked> Apply crop box to the processed / PNG saves (RAW original is never cropped)</label>
+</section>
+
+<!-- ================================================================ processing column (built by app.js) -->
+<aside id="right" aria-label="Image processing">
+  <div id="proc"></div>
+  <details class="panel" id="p-help">
+    <summary>Processing chain (order)</summary>
+    <div class="body help">
+      <ol>
+        <li><b>Dark subtraction</b> – int32 subtract, clamp 0…65535, nothing added back. Skipped without a dark, for dark frames, or on a size mismatch.</li>
+        <li><b>Line repair</b> – dead rows / columns (robust running-median detector, border 12) from the dark-subtracted frame OR the dark; manual rows / columns join the list; linear interpolation, truncated to u16.</li>
+        <li><b>Pixel repair</b> – manual pixels, then optional automatic hot / dead pixels (median of good neighbours). Runs after the lines on purpose.</li>
+        <li><b>Destripe</b> → <b>Background flatten</b> → <b>Denoise</b> → <b>Unsharp</b> → <b>Local contrast</b> – float32, each one bypassable. Rounded to u16 afterwards.</li>
+        <li><b>Rotate / flip</b> – the result is the <i>processed 16-bit data</i> that the RAW-processed and PNG-16 saves contain.</li>
+        <li><b>Window</b> (percentile or manual, optional gamma / log / sigmoid curve) → 8 bit.</li>
+        <li><b>CLAHE</b> on the 8-bit window (cv2-exact) → <b>Invert</b> → <b>Palette</b> = displayed image and PNG display.</li>
+      </ol>
+    </div>
+  </details>
+</aside>
+</main>
+
+<dialog id="dlg" aria-labelledby="dlg-title">
+  <form method="dialog">
+    <h3 id="dlg-title"></h3><p id="dlg-body"></p>
+    <div class="btns end"><button class="btn" value="cancel" id="dlg-cancel">Cancel</button><button class="btn primary" value="ok" id="dlg-ok">OK</button></div>
+  </form>
+</dialog>
+
+<script src="palettes.js"></script>
+<script src="png16.js"></script>
+<script src="proc-core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
