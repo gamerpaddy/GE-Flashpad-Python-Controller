@@ -328,4 +328,21 @@ or data files are included or required.
 
 ## Licence
 
+[Unlicense](LICENSE) — public domain. Use it, fork it, put a detector back to work.
+
+---
+
+## Standalone ESP32-S31 version (branch `esp32-s31`)
+
+[`esp32s31/`](esp32s31/) ports the controller to an **ESP32-S31-Function-CoreBoard-1**: the ESP is the host on its
+Ethernet port (192.168.1.1, 100 Mbit, jumbo RX), captures the 2048 × 2048 frame itself, keeps the detector session
+up between captures, fires the X-ray through a GPIO relay (GPIO2, master switch off at boot, hard pulse cap) and serves
+a web UI over Wi-Fi (SoftAP `FlashPad-ESP`, `http://192.168.4.1/`) with dark subtraction, defect repair, autorange,
+palettes, invert, CLAHE, denoising, enhancement and raw / PNG saving.
+
+![ESP32-S31 web UI on a phone](docs/esp32s31-web-ui.png)
+
+Needs ESP-IDF v6.1 plus `esp32s31/idf_patches/0001-esp_eth-jumbo-rx.patch`. API: `esp32s31/docs/API.md`,
+protocol notes: `esp32s31/docs/PROTOCOL.md`, PC-side detector simulator: `esp32s31/tools/`.
+Tested against the simulator only so far; **drives X-ray equipment - read the safety notes above.**
 [Unlicense](LICENSE) -  public domain. Use it, fork it, put a detector back to work.

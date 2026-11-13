@@ -1,0 +1,3 @@
+dependencies:
+  # cJSON moved out of ESP-IDF core into the component registry in IDF 6.x
+  espressif/cjson: "*"

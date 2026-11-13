@@ -1,0 +1,48 @@
+{
+ "files": [
+  {
+   "name": "app.css",
+   "content_type": "text/css; charset=utf-8",
+   "gz_size": 3882,
+   "size": 14301
+  },
+  {
+   "name": "app.js",
+   "content_type": "application/javascript; charset=utf-8",
+   "gz_size": 20818,
+   "size": 70116
+  },
+  {
+   "name": "index.html",
+   "content_type": "text/html; charset=utf-8",
+   "gz_size": 3541,
+   "size": 11247
+  },
+  {
+   "name": "palettes.js",
+   "content_type": "application/javascript; charset=utf-8",
+   "gz_size": 6962,
+   "size": 10307
+  },
+  {
+   "name": "png16.js",
+   "content_type": "application/javascript; charset=utf-8",
+   "gz_size": 2237,
+   "size": 5510
+  },
+  {
+   "name": "proc-core.js",
+   "content_type": "application/javascript; charset=utf-8",
+   "gz_size": 13966,
+   "size": 43159
+  },
+  {
+   "name": "proc-worker.js",
+   "content_type": "application/javascript; charset=utf-8",
+   "gz_size": 1664,
+   "size": 4352
+  }
+ ],
+ "total_gz": 53070,
+ "total_raw": 158992
+}
